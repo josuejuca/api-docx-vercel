@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from num2words import num2words
 
-
+import shutil
 
 
 app = FastAPI()
@@ -18,10 +18,15 @@ app = FastAPI()
 TEMPLATES_DIR = "/tmp/templates/"
 OUTPUTS_DIR = "/tmp/outputs/"
 
-
 # Certifique-se de que os diretórios existem
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+# Copie o modelo para o diretório /tmp/templates se não existir
+SOURCE_TEMPLATE = "app/tmp/templates/autorizacao-de-venda.docx"
+
+if not os.path.exists(f"{TEMPLATES_DIR}autorizacao-de-venda.docx"):
+    shutil.copy(SOURCE_TEMPLATE, TEMPLATES_DIR)
 
 def formatar_cpf(cpf: str) -> str:
     """Formata o CPF no padrão 000.000.000-00."""
