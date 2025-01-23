@@ -15,8 +15,8 @@ from num2words import num2words
 app = FastAPI()
 
 # Caminhos de diretório
-TEMPLATES_DIR = "./templates/"
-OUTPUTS_DIR = "./outputs/"
+TEMPLATES_DIR = "/tmp/templates/"
+OUTPUTS_DIR = "/tmp/outputs/"
 
 
 # Certifique-se de que os diretórios existem
