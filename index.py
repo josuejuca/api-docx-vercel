@@ -1,11 +1,13 @@
 ﻿import base64
 import binascii
+import json
 import os
 import tempfile
 from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from mailmerge import MailMerge
 
@@ -61,6 +63,44 @@ def generate_docx(payload: GenerateRequest) -> dict[str, Any]:
                 response["file_base64"] = base64.b64encode(f.read()).decode("utf-8")
 
         return response
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"erro ao gerar docx: {exc}") from exc
+
+
+@app.post("/generate-file")
+def generate_docx_file(
+    file: UploadFile = File(...),
+    merge_data_json: str = Form(..., description="JSON com os campos para merge"),
+) -> FileResponse:
+    request_uuid = str(uuid4())
+    input_path = os.path.join(TMP_DIR, f"{request_uuid}_template.docx")
+    output_path = os.path.join(TMP_DIR, f"{request_uuid}_output.docx")
+
+    try:
+        merge_data_raw = json.loads(merge_data_json)
+        if not isinstance(merge_data_raw, dict):
+            raise ValueError("merge_data_json deve ser um objeto JSON")
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="merge_data_json invalido") from exc
+
+    try:
+        with open(input_path, "wb") as f:
+            f.write(file.file.read())
+
+        merge_data = {k: "" if v is None else str(v) for k, v in merge_data_raw.items()}
+        merge_data["uuid"] = request_uuid
+
+        with MailMerge(input_path) as doc:
+            doc.merge(**merge_data)
+            doc.write(output_path)
+
+        return FileResponse(
+            output_path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=f"{request_uuid}.docx",
+        )
     except HTTPException:
         raise
     except Exception as exc:
